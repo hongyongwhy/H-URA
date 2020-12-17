@@ -49,12 +49,12 @@ parser.add_argument('--warm_up_steps', type=int, default=32*8*0)# around 5.5 per
 parser.add_argument('--seed', type=int, default=810)
 parser.add_argument('--rnn_type', type=str, default="LSTM", choices=["LSTM", "GRU"])
 parser.add_argument('--optim_type', type=str, default="Adam", choices=["Adam", "Adadelta", "RMSprop", "Adagrad"]) #AMSGrad
-parser.add_argument('--data_dir', type=str, default='./acl2015')
+parser.add_argument('--data_dir', type=str, default='../dataset')
 parser.add_argument('--breakpoint', type=int, default=-1)
-parser.add_argument('--model_idx', type=int, default='428')
+parser.add_argument('--model_idx', type=int, default='263') #HY: Change here
 
 parser.add_argument('--path_character', type=str, default='vocab-c')
-parser.add_argument('--dataset', type=str, default='yelp14', choices=['imdb', 'yelp13', 'yelp14'])
+parser.add_argument('--dataset', type=str, default='yelp13', choices=['imdb', 'yelp13', 'yelp14'])
 
 parser.add_argument('--use_rdn_ctr', type=bool, default=True, choices=[True, False])
 
@@ -83,20 +83,24 @@ print(use_cuda)
 
 
 def get_data_path():
-    data_set_name = FLAGS.dataset
-    if data_set_name == 'yelp13':
-        word_embed_path = FLAGS.data_dir + '/yelp13/yelp-2013-embedding-200d.txt'
-        usr_pdr_embed_path = FLAGS.data_dir + '/yelp13/yelp13_mf.pkl'
-        data_path = [FLAGS.data_dir + '/yelp13/yelp-2013-seg-20-20.train.ss', FLAGS.data_dir + '/yelp13/yelp-2013-seg-20-20.dev.ss', FLAGS.data_dir + '/yelp13/yelp-2013-seg-20-20.test.ss']
-    elif data_set_name == 'yelp14':
-        word_embed_path = FLAGS.data_dir + '/yelp14/yelp-2014-embedding-200d.txt'
-        usr_pdr_embed_path = FLAGS.data_dir + '/yelp14/yelp14_mf.pkl'
-        data_path = [FLAGS.data_dir + '/yelp14/yelp-2014-seg-20-20.train.ss', FLAGS.data_dir + '/yelp14/yelp-2014-seg-20-20.dev.ss', FLAGS.data_dir + '/yelp14/yelp-2014-seg-20-20.test.ss']
-    elif data_set_name == 'imdb':
-        word_embed_path = FLAGS.data_dir + '/imdb/imdb-embedding-200d.txt'
-        usr_pdr_embed_path = FLAGS.data_dir + '/imdb/imdb_mf.pkl'
-        data_path = [FLAGS.data_dir + '/imdb/imdb.train.txt.ss', FLAGS.data_dir + '/imdb/imdb.dev.txt.ss', FLAGS.data_dir + '/imdb/imdb.test.txt.ss']
+    # data_set_name = FLAGS.dataset
+    # if data_set_name == 'yelp13':
+    #     word_embed_path = FLAGS.data_dir + '/yelp13/yelp-2013-embedding-200d.txt'
+    #     usr_pdr_embed_path = FLAGS.data_dir + '/yelp13/yelp13_mf.pkl'
+    #     data_path = [FLAGS.data_dir + '/yelp13/yelp-2013-seg-20-20.train.ss', FLAGS.data_dir + '/yelp13/yelp-2013-seg-20-20.dev.ss', FLAGS.data_dir + '/yelp13/yelp-2013-seg-20-20.test.ss']
+    # elif data_set_name == 'yelp14':
+    #     word_embed_path = FLAGS.data_dir + '/yelp14/yelp-2014-embedding-200d.txt'
+    #     usr_pdr_embed_path = FLAGS.data_dir + '/yelp14/yelp14_mf.pkl'
+    #     data_path = [FLAGS.data_dir + '/yelp14/yelp-2014-seg-20-20.train.ss', FLAGS.data_dir + '/yelp14/yelp-2014-seg-20-20.dev.ss', FLAGS.data_dir + '/yelp14/yelp-2014-seg-20-20.test.ss']
+    # elif data_set_name == 'imdb':
+    #     word_embed_path = FLAGS.data_dir + '/imdb/imdb-embedding-200d.txt'
+    #     usr_pdr_embed_path = FLAGS.data_dir + '/imdb/imdb_mf.pkl'
+    #     data_path = [FLAGS.data_dir + '/imdb/imdb.train.txt.ss', FLAGS.data_dir + '/imdb/imdb.dev.txt.ss', FLAGS.data_dir + '/imdb/imdb.test.txt.ss']
 
+    word_embed_path = FLAGS.data_dir + '/yelp/yelp-embedding-200d.txt'
+    usr_pdr_embed_path = FLAGS.data_dir + '/yelp/yelp.pkl'
+    data_path = [FLAGS.data_dir + '/yelp/yelp_train.ss', FLAGS.data_dir + '/yelp/yelp_validate.ss', FLAGS.data_dir + '/yelp/yelp_test.ss']
+    
     return word_embed_path, usr_pdr_embed_path, data_path
 
 
@@ -117,8 +121,8 @@ def evaluate(name, model, eval_data):
         probs, losses,  [v_s_a_score, vs_d_doc_a_score] = model.predict(batched_data)
         prd_label = np.argmax(probs, axis=1)
         labels = np.squeeze(np.array([b[4] for b in batched_data]))
-
-        batch_viz_data = {'batch_idx': idx, 'word_score': v_s_a_score, 'sen_score': vs_d_doc_a_score, 'pred_labels': prd_label, 'label': labels}
+        reviews = np.squeeze(np.array([b[8] for b in batched_data]))
+        batch_viz_data = {'batch_idx': idx, 'word_score': v_s_a_score, 'sen_score': vs_d_doc_a_score, 'pred_labels': prd_label, 'label': labels, 'reviews': reviews}
         viz_data['data'].append(batch_viz_data)
 
         all_prob.append(probs)
@@ -187,7 +191,7 @@ class JointModel(object):
         configure("summary/%s" % model_path, flush_secs=3)
 
         # load models
-        self.model.load_model(f"./model/{FLAGS.dataset}/{FLAGS.name_model}", FLAGS.model_idx)
+        self.model.load_model(f"../model/{FLAGS.dataset}/{FLAGS.name_model}", FLAGS.model_idx)
         print('model loaded')
         # evaluation
         for (eval_data, name) in zip([self.train_set, self.valid_set, self.test_set], ['train', 'dev', 'test']):

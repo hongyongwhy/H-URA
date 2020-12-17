@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import os
 import numpy as np
 import torch
@@ -78,7 +79,8 @@ class bridgeModelDist(nn.Module):
         usrs_rate_dist_list, pdrs_rate_dist_list = [], []
         very_small_value = 1e-12
         #usr, prd, t_usr_rate_dist, t_pdr_rate_dist, label, docs, docs_len
-        for (usr, prd, usr_rate_dist, pdr_rate_dist, label, doc, lens) in batched_data:
+        #usr, prd, t_usr_rate_dist, t_pdr_rate_dist, label, docs, docs_len, org_docs
+        for (usr, prd, usr_rate_dist, pdr_rate_dist, label, doc, lens, org_docs, review) in batched_data:
             batched_docs.extend(doc)
             docs_len.append(len(lens))
             sens_len.extend(lens)
@@ -98,7 +100,7 @@ class bridgeModelDist(nn.Module):
         pdr_rate_dist = Variable(torch.FloatTensor(pdrs_rate_dist_list)).cuda() if self.use_cuda else Variable(torch.FloatTensor(pdrs_rate_dist_list))
 
         dict_data = {'docs': var_batched_docs, 'usrs': var_usrs, 'prds': var_pdrs, 'usr_rate_dist': usr_rate_dist, 'pdr_rate_dist': pdr_rate_dist,
-                     'labels': var_doc_labels, 'len_docs': docs_len, 'len_sens': sens_len}
+                     'labels': var_doc_labels, 'len_docs': docs_len, 'len_sens': sens_len, 'review': review}
 
         return dict_data
 
@@ -108,10 +110,10 @@ class bridgeModelDist(nn.Module):
 
         # with response instances
         b_data = self.get_batch_data(batched_data)
-        pdr_usr_prob = self.model(b_data)
+
+        pdr_usr_prob, [v_s_a_score, vs_d_doc_a_score] = self.model(b_data)
         loss = F.nll_loss(pdr_usr_prob, b_data['labels'], ignore_index=-1)
-        
-        return pdr_usr_prob.data.cpu().numpy(), loss.data.cpu().numpy()
+        return pdr_usr_prob.data.cpu().numpy(), loss.data.cpu().numpy(), [v_s_a_score.data.cpu().numpy(), vs_d_doc_a_score.data.cpu().numpy()]
 
     def stepTrain(self, batched_data):
         # Turn on training mode which enables dropout.

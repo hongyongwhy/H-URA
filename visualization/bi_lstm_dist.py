@@ -54,10 +54,10 @@ class bi_lstm_dist(nn.Module):
         self.sentence_encoder = DynamicRNN(input_size=dim_word_input, hidden_size=self.dim_sentence_hidden, num_layers=n_layers, dropout=cell_dropout_rate if n_layers > 1 else 0,
                                            bidirectional=bidirectional, rnn_type=rnn_type, use_cuda=use_cuda)
         self.word_atten = RateDistAttenUser(dim_input_hidden=self.dim_sentence_hidden * (2 if bidirectional else 1), dim_usr=dim_user_product_input, n_class=n_classes, use_cuda=use_cuda)
-        
+
         self.doc_encoder = DynamicRNN(self.dim_sentence_hidden * (2 if bidirectional else 1), self.dim_doc_hidden, n_layers, dropout=cell_dropout_rate if n_layers > 1 else 0,
                                       bidirectional=bidirectional, rnn_type=rnn_type, use_cuda=use_cuda)
-        
+
         self.sen_atten = RateDistAttenUser(self.dim_doc_hidden * (2 if bidirectional else 1), dim_usr=dim_user_product_input, n_class=n_classes, use_cuda=use_cuda)
         # self.p_sen_atten = ClusterAttention(self.dim_doc_hidden * (2 if bidirectional else 1), dim_usr=dim_user_product_input, dim_pdr=dim_user_product_input, n_center=num_cluster,
         #                                     n_class=n_classes, use_cuda=use_cuda)
@@ -67,7 +67,7 @@ class bi_lstm_dist(nn.Module):
         self.usr_pdr_out = nn.Linear(self.n_classes * 2, self.n_classes)
 
         self.doc_linear = nn.Linear(in_features=(self.dim_doc_hidden * (2 if bidirectional else 1)) + self.n_classes, out_features=self.n_classes, bias=True)
-        
+
         # init weights
         self.init_weights(doc_embed_list, usr_embed_list, pdr_embed_list)
         ignored_params = list(map(id, self.doc_embed.parameters())) + list(map(id, self.usr_embed.parameters())) + list(map(id, self.pdr_embed.parameters()))
@@ -197,4 +197,4 @@ class bi_lstm_dist(nn.Module):
         # 2. KL between center, and input usr dist
         # kl_intra_u_center_loss = self.compute_intra_centers_kl_loss(self.usr_centers) # maximize
         # kl_u_center_loss = F.kl_div(input_usr_dist.log(), input_usr_dist_centers) # minimize
-        return doc_prob #, kl_intra_u_center_loss, kl_u_center_loss
+        return doc_prob, [v_s_a_score, vs_d_doc_a_score] #, kl_intra_u_center_loss, kl_u_center_loss

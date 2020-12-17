@@ -52,13 +52,14 @@ class Dataset(object):
         self.t_label = []
         self.t_docs = []
         self.t_docs_len = []
+        self.t_reviews = []
 
         with open(data_file, 'r', encoding='utf-8', errors='ignore') as f:
             for idx, line in enumerate(f):
                 # if idx > 100: break
                 fields = line.strip().split('\t\t')
                 review = fields[3].lower()
-                doc_idx, doc_len = self.doc_to_index(review, vocab_dict, max_doc_len, max_sen_len)
+                doc_idx, doc_len, reviews = self.doc_to_index(review, vocab_dict, max_doc_len, max_sen_len)
                 if len(doc_len) > 0:
                     usr_idx = self.usr_to_indx(usr_dict, fields[0])
                     pdr_idx = self.pdr_to_idx(pdr_dict, fields[1])
@@ -74,6 +75,8 @@ class Dataset(object):
                     self.t_docs.extend(doc_idx)
                     self.t_docs_len.extend(doc_len)
 
+                    self.t_reviews.extend(reviews)
+
         self.t_usr = np.asarray(self.t_usr)
         self.t_prd = np.asarray(self.t_prd)
 
@@ -83,6 +86,7 @@ class Dataset(object):
         self.t_label = np.asarray(self.t_label)
         self.t_docs = np.asarray(self.t_docs)
         self.t_docs_len = np.asarray(self.t_docs_len)
+        self.t_reviews = np.asarray(self.t_reviews)
         self.data_size = len(self.t_usr)
         # gen batch
 
@@ -91,32 +95,38 @@ class Dataset(object):
     def doc_to_index(self, doc, vocab_dict, max_doc_len, max_sen_len):
         doc_len = []
         doc_idx = []
+        doc_review = []
         sentences = doc.split('<sssss>')
         sen_word_idx = []
         sen_len = []
+        sen_review = []
         # Sentence segmentation
         for _idx, sen in enumerate(sentences):
             if len(sen_word_idx) >= max_doc_len: break  # max no. of sentences per doc
             word_idx = []
+            review = []
             words = sen.strip().split()
             for word in words:
                 if len(word_idx) >= max_sen_len: break  # max no. of words per sentence
                 if vocab_dict.get(word, None) is not None:
                     word_idx.append(vocab_dict[word])
+                    review.append(word)
 
             if len(word_idx) > 0:
                 sen_len.append(len(word_idx))
                 # pad sen_word_idx to max_len
                 word_idx = word_idx + [0] * (max_sen_len - len(word_idx))
                 sen_word_idx.append(word_idx)
+                sen_review.append(review)
 
         #doc_idx contains the mapping of the word in the review to the vocab dict
         #doc_len is the length of the sentence. Maximum 50.
         if len(sen_word_idx) > 0:
             doc_len.append(sen_len)
             doc_idx.append(sen_word_idx)
+            doc_review.append(sen_review)
 
-        return doc_idx, doc_len
+        return doc_idx, doc_len, doc_review
 
     def usr_to_indx(self, usr_dict, usr):
         # increase idx by 1, 1st role is empty usr, check load usr embedding
@@ -152,7 +162,9 @@ class Dataset(object):
 
     def genBatch(self, batch_size):
         data_size = len(self.t_docs)
-        num_steps = data_size // batch_size + (1 if data_size % batch_size else 0)
+        num_steps = data_size // batch_size + (1 if data_size % batch_size else 0)        
+        print("Batch size:" + str(batch_size))
+        print("Num of steps:" + str(num_steps))
         for i in range(num_steps):
             usr = self.t_usr[i*batch_size:(i+1)*batch_size]
             prd = self.t_prd[i*batch_size:(i+1)*batch_size]
@@ -163,9 +175,10 @@ class Dataset(object):
             label = self.t_label[i*batch_size:(i+1)*batch_size]
             docs = self.t_docs[i*batch_size:(i+1)*batch_size]
             docs_len = self.t_docs_len[i*batch_size:(i+1)*batch_size]
-            
-            # b_docs, b_doc_len = fit_transform(self.t_docs[i*batch_size:(i+1)*batch_size], wordsdict, max_sen_len, max_doc_len)
-            batch_data = list(zip(usr, prd, t_usr_rate_dist, t_pdr_rate_dist, label, docs, docs_len))
+            #b_docs, b_doc_len = fit_transform(self.t_docs[i*batch_size:(i+1)*batch_size], wordsdict, max_sen_len, max_doc_len)
+            b_docs = self.t_docs[i*batch_size:(i+1)*batch_size]
+            reviews = self.t_reviews[i*batch_size:(i+1)*batch_size]
+            batch_data = list(zip(usr, prd, t_usr_rate_dist, t_pdr_rate_dist, label, docs, docs_len, b_docs, reviews))
             self.gen_batched_data.append(batch_data)
         print('total batches:', len(self.gen_batched_data))
 
