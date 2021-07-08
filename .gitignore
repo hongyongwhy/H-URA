@@ -5,3 +5,11 @@
 /visualization/viz_log
 
 __pycache__
+*.tex
+*.fdb_latexmk
+*.DESKTOP-BA1GVQ6
+*.aux
+*.gz
+*.log
+*.pdf
+*.fls

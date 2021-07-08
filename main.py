@@ -42,7 +42,7 @@ parser.add_argument('--max_doc_len', type=int, default=40)
 
 parser.add_argument('--batch_size', type=int, default=32)  #HY: change from 32 to 16
 parser.add_argument('--num_epochs', type=int, default=32*4056) #HY: Change from 32 to 128
-parser.add_argument('--per_checkpoint', type=int, default=256*8)# around 5.5 per epoch, 26 steps / epoch for imdb #HY change from 32 to 512
+parser.add_argument('--per_checkpoint', type=int, default=32*8)# around 5.5 per epoch, 26 steps / epoch for imdb #HY change from 32 to 64
 parser.add_argument('--warm_up_steps', type=int, default=32*8*0)# around 5.5 per epoch 
 
 parser.add_argument('--seed', type=int, default=810)
@@ -66,10 +66,14 @@ print(FLAGS.name_model)
 np.random.seed(FLAGS.seed)
 random.seed(FLAGS.seed)
 torch.manual_seed(FLAGS.seed)
-# torch.backends.cudnn.enabled = False
+torch.backends.cudnn.enabled = False #HY disabled cuDNN to fix crash
 use_cuda = torch.cuda.is_available() #HY disabled cuda
 if use_cuda:
     torch.cuda.manual_seed(FLAGS.seed)
+
+#import os
+#os.environ['CUDA_LAUNCH_BLOCKING'] = '1' #HY trying to fix crash
+
 
 model_path = '{}/{}'.format(FLAGS.dataset, FLAGS.name_model)
 
@@ -145,7 +149,7 @@ class JointModel(object):
         doc_embed, vocab_dict = load_embedding(data_paths[0], FLAGS.dim_word)
         [usr_dict, pdr_dict], [user_embed, product_embed], [usr_rate_dist, pdr_rate_dist] = load_user_product_embeddings(file_path=data_paths[1])
         assert user_embed.shape[1] == FLAGS.dim_pre_usr_pdr_input
-
+        
         self.train_set = Dataset(data_paths[2][0], FLAGS.max_doc_len, FLAGS.max_sen_len, vocab_dict, usr_dict, pdr_dict, usr_rate_dist_list=usr_rate_dist, pdr_rate_dist_list=pdr_rate_dist)
         self.valid_set = Dataset(data_paths[2][1], FLAGS.max_doc_len, FLAGS.max_sen_len, vocab_dict, usr_dict, pdr_dict, usr_rate_dist_list=usr_rate_dist, pdr_rate_dist_list=pdr_rate_dist)
         self.test_set = Dataset(data_paths[2][2], FLAGS.max_doc_len, FLAGS.max_sen_len, vocab_dict, usr_dict, pdr_dict, usr_rate_dist_list=usr_rate_dist, pdr_rate_dist_list=pdr_rate_dist)
@@ -190,7 +194,7 @@ class JointModel(object):
         start_time = time.time()
         
         for step, batched_data in enumerate(train_batches):
-            if step % 10 == 0:
+            if step % 100 == 0:
                 print(step)
             if step < start_iter: continue # continue from previous break point
             if step % FLAGS.per_checkpoint == 0 and step > FLAGS.warm_up_steps:

@@ -51,7 +51,7 @@ parser.add_argument('--rnn_type', type=str, default="LSTM", choices=["LSTM", "GR
 parser.add_argument('--optim_type', type=str, default="Adam", choices=["Adam", "Adadelta", "RMSprop", "Adagrad"]) #AMSGrad
 parser.add_argument('--data_dir', type=str, default='../dataset')
 parser.add_argument('--breakpoint', type=int, default=-1)
-parser.add_argument('--model_idx', type=int, default='263') #HY: Change here
+parser.add_argument('--model_idx', type=int, default='72') #HY: Change here
 
 parser.add_argument('--path_character', type=str, default='vocab-c')
 parser.add_argument('--dataset', type=str, default='yelp13', choices=['imdb', 'yelp13', 'yelp14'])
@@ -72,6 +72,7 @@ np.random.seed(FLAGS.seed)
 random.seed(FLAGS.seed)
 torch.manual_seed(FLAGS.seed)
 # torch.backends.cudnn.enabled = False
+torch.backends.cudnn.enabled = False #HY disabled cuDNN to fix crash
 use_cuda = torch.cuda.is_available()
 if use_cuda:
     torch.cuda.manual_seed(FLAGS.seed)

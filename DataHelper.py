@@ -57,6 +57,7 @@ class Dataset(object):
             for idx, line in enumerate(f):
                 # if idx > 100: break
                 fields = line.strip().split('\t\t')
+                # HY: One review was totally empty. Manually removed from dataset.
                 review = fields[3].lower()
                 doc_idx, doc_len = self.doc_to_index(review, vocab_dict, max_doc_len, max_sen_len)
                 if len(doc_len) > 0:

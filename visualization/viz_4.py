@@ -895,12 +895,12 @@ def generate_tex(model_idx):
 
 
 if __name__ == '__main__':
-    model_idx = 263
+    model_idx = 72
 
     #create_data_set(model_idx=model_idx)
     #find_all_pairs(model_idx=model_idx)
-    #yelp14_all_sample_terms(model_idx=model_idx)
-    #find_yelp14_all_sample_terms_data(model_idx=model_idx)
+    yelp14_all_sample_terms(model_idx=model_idx)
+    find_yelp14_all_sample_terms_data(model_idx=model_idx)
     generate_tex(model_idx=model_idx)
 
     # yelp14_all_sample_terms(model_idx=327)
